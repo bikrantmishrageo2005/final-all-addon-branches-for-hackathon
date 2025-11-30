@@ -4,285 +4,204 @@ import streamlit as st
 import plotly.express as px
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="AetherVision Omega – Geo-AI SmartCity Guardian",
-    layout="wide"
-)
-
+# -------------------------------------------------------------------
+# BASIC CONFIG
+# -------------------------------------------------------------------
+st.set_page_config(page_title="AetherVision Omega", layout="wide")
 OUTPUT_ROOT = "outputs"
 
-
-def safe_read_csv(path):
+# -------------------------------------------------------------------
+# SAFE LOAD FUNCTIONS
+# -------------------------------------------------------------------
+def read_csv(path):
     if os.path.exists(path):
-        try:
-            return pd.read_csv(path)
-        except:
-            return None
-    return None
+        return pd.read_csv(path)
+    else:
+        st.warning(f"Missing file: {path}")
+        return None
 
-
-def safe_show_html(path, height=600):
+def show_html(path):
     if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                components.html(f.read(), height=height, scrolling=True)
-        except:
-            pass
+        with open(path, "r", encoding="utf-8") as f:
+            html = f.read()
+        components.html(html, height=600, scrolling=True)
+    else:
+        st.warning(f"Missing HTML file: {path}")
 
+def map_from_csv(df, lat_col="lat", lon_col="lon", color=None, title="Map"):
+    if df is None:
+        st.info("No data available.")
+        return
 
-def section(title):
-    st.subheader(title)
-    st.markdown("---")
+    if lat_col not in df.columns or lon_col not in df.columns:
+        st.error("Latitude/Longitude columns not found.")
+        st.dataframe(df.head())
+        return
 
+    fig = px.scatter_mapbox(
+        df,
+        lat=lat_col,
+        lon=lon_col,
+        color=color if color else None,
+        zoom=4,
+        height=600,
+        hover_data=df.columns
+    )
 
-st.sidebar.title("AetherVision Omega")
-st.sidebar.write("Geo-AI SmartCity Guardian System")
+    # ⭐ NO MAPBOX TOKEN — USE FREE OSM
+    fig.update_layout(mapbox_style="open-street-map")
 
-branch = st.sidebar.radio(
+    st.plotly_chart(fig, use_container_width=True)
+
+# -------------------------------------------------------------------
+# SIDEBAR MENU
+# -------------------------------------------------------------------
+menu = st.sidebar.radio(
     "Select Module",
     [
         "Home",
-        "Branch 1 – Core Digital Twin",
+        "Branch 1 – Digital Twin",
         "Branch 2 – Environmental Analytics",
-        "Branch 3 – Geo-AI Fusion Risk Engine",
+        "Branch 3 – Fusion Risk Engine",
         "Branch 4 – Real-Time Urban Risk",
-        "Branch 5 – 7-Day Urban Hazard Forecast",
+        "Branch 5 – 7-Day Forecast",
         "Branch 6 – GeoHealth Dashboard",
         "Branch 7 – Early Warning Alerts",
-        "Branch 8 – Smart-City Decision Engine"
+        "Branch 8 – Decision Engine"
     ]
 )
 
-# --------------------------------------------------------------
+# -------------------------------------------------------------------
 # HOME
-# --------------------------------------------------------------
-if branch == "Home":
-    st.title("AetherVision Omega – Geo-AI SmartCity Guardian")
+# -------------------------------------------------------------------
+if menu == "Home":
+    st.title("AetherVision Omega – Geo-AI SmartCity Guardian System")
+    st.markdown("""
+AetherVision Omega combines eight Geo-AI modules:
 
-    st.write("""
-AetherVision Omega is a Geo-AI Smart City Guardian System with 8 integrated modules:
 1. Core Digital Twin  
 2. Environmental Analytics  
-3. Geo-AI Fusion Risk Engine  
-4. Real-Time Urban Risk  
+3. Fusion Risk Engine  
+4. Real-Time Urban Risk Monitor  
 5. 7-Day Hazard Forecast  
 6. GeoHealth Dashboard  
 7. Early Warning Alerts  
-8. Smart-City Decision Engine  
+8. Decision Engine  
 """)
 
+# -------------------------------------------------------------------
+# BRANCH 1 – DIGITAL TWIN (HTML Maps)
+# -------------------------------------------------------------------
+elif menu == "Branch 1 – Digital Twin":
+    st.header("Branch 1 – Core Digital Twin")
 
-# --------------------------------------------------------------
-# BRANCH 1
-# --------------------------------------------------------------
-elif branch == "Branch 1 – Core Digital Twin":
-    section("Branch 1 – Core GeoAI Digital Twin")
+    show_html(os.path.join(OUTPUT_ROOT, "branch1/digital_twin_base.html"))
+    st.subheader("Environmental Layers")
+    show_html(os.path.join(OUTPUT_ROOT, "branch1/india_env_layers.html"))
+    st.subheader("Geology Layers")
+    show_html(os.path.join(OUTPUT_ROOT, "branch1/geology_layers.html"))
 
-    base_html = os.path.join(OUTPUT_ROOT, "branch1", "digital_twin_base.html")
-    env_html = os.path.join(OUTPUT_ROOT, "branch1", "india_env_layers.html")
-    geo_html = os.path.join(OUTPUT_ROOT, "branch1", "geology_layers.html")
+# -------------------------------------------------------------------
+# BRANCH 2 – ENVIRONMENTAL ANALYTICS
+# -------------------------------------------------------------------
+elif menu == "Branch 2 – Environmental Analytics":
+    st.header("Branch 2 – Environmental Analytics")
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch2/env_analytics.csv"))
 
-    view = st.radio(
-        "Select View",
-        ["Digital Twin Base", "Environmental Layers", "Geological Layers", "Full Dashboard"],
-        horizontal=True
-    )
+    if df is not None:
+        st.dataframe(df)
+        lat_col = st.selectbox("Latitude Column", df.columns)
+        lon_col = st.selectbox("Longitude Column", df.columns)
+        col = st.selectbox("Color Column", df.columns)
+        map_from_csv(df, lat_col, lon_col, col, "Environmental Hotspots")
 
-    if view == "Digital Twin Base":
-        safe_show_html(base_html)
+# -------------------------------------------------------------------
+# BRANCH 3 – FUSION RISK ENGINE
+# -------------------------------------------------------------------
+elif menu == "Branch 3 – Fusion Risk Engine":
+    st.header("Branch 3 – Fusion Risk Engine")
 
-    elif view == "Environmental Layers":
-        safe_show_html(env_html)
-
-    elif view == "Geological Layers":
-        safe_show_html(geo_html)
-
-    else:
-        col1, col2 = st.columns(2)
-        with col1:
-            safe_show_html(base_html, 300)
-            safe_show_html(env_html, 300)
-        with col2:
-            safe_show_html(geo_html, 600)
-
-
-# --------------------------------------------------------------
-# BRANCH 2
-# --------------------------------------------------------------
-elif branch == "Branch 2 – Environmental Analytics":
-    section("Branch 2 – Environmental Analytics")
-
-    csv_path = os.path.join(OUTPUT_ROOT, "branch2", "env_analytics.csv")
-    df = safe_read_csv(csv_path)
+    show_html(os.path.join(OUTPUT_ROOT, "branch3/fusion_risk_heatmap.html"))
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch3/fusion_risk_scores.csv"))
 
     if df is not None:
         st.dataframe(df)
 
-        lat = st.selectbox("Latitude column", df.columns)
-        lon = st.selectbox("Longitude column", df.columns)
-        color = st.selectbox("Color column", df.columns)
+# -------------------------------------------------------------------
+# BRANCH 4 – REAL-TIME URBAN RISK
+# -------------------------------------------------------------------
+elif menu == "Branch 4 – Real-Time Urban Risk":
+    st.header("Branch 4 – Real-Time Urban Risk")
 
-        fig = px.scatter_mapbox(
-            df, lat=lat, lon=lon, color=color,
-            mapbox_style="carto-positron", zoom=4, height=600
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    show_html(os.path.join(OUTPUT_ROOT, "branch4/risk_map.html"))
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch4/risk_scores.csv"))
 
-
-# --------------------------------------------------------------
-# BRANCH 3
-# --------------------------------------------------------------
-elif branch == "Branch 3 – Geo-AI Fusion Risk Engine":
-    section("Branch 3 – Geo-AI Fusion Risk Engine")
-
-    fusion_csv = os.path.join(OUTPUT_ROOT, "branch3", "fusion_risk_scores.csv")
-    fusion_html = os.path.join(OUTPUT_ROOT, "branch3", "fusion_risk_heatmap.html")
-
-    df = safe_read_csv(fusion_csv)
-
-    tab1, tab2 = st.tabs(["Risk Heatmap", "Risk Scores"])
-
-    with tab1:
-        safe_show_html(fusion_html)
-
-    with tab2:
-        if df is not None:
-            st.dataframe(df)
-            if "risk_score" in df.columns:
-                st.plotly_chart(
-                    px.histogram(df, x="risk_score", nbins=20),
-                    use_container_width=True
-                )
-
-
-# --------------------------------------------------------------
-# BRANCH 4
-# --------------------------------------------------------------
-elif branch == "Branch 4 – Real-Time Urban Risk":
-    section("Branch 4 – Real-Time Urban Risk Model")
-
-    risk_csv = os.path.join(OUTPUT_ROOT, "branch4", "risk_scores.csv")
-    risk_html = os.path.join(OUTPUT_ROOT, "branch4", "risk_map.html")
-    report = os.path.join(OUTPUT_ROOT, "branch4", "hazard_report.txt")
-
-    df = safe_read_csv(risk_csv)
-
-    tab1, tab2, tab3 = st.tabs(["Risk Map", "City Risk Scores", "Report"])
-
-    with tab1:
-        safe_show_html(risk_html)
-
-    with tab2:
-        if df is not None:
-            st.dataframe(df)
-            if "risk_level" in df.columns:
-                st.plotly_chart(
-                    px.bar(df, x="city", y="risk_score", color="risk_level"),
-                    use_container_width=True
-                )
-
-    with tab3:
-        if os.path.exists(report):
-            with open(report, "r") as f:
-                st.text(f.read())
-
-
-# --------------------------------------------------------------
-# BRANCH 5
-# --------------------------------------------------------------
-elif branch == "Branch 5 – 7-Day Urban Hazard Forecast":
-    section("Branch 5 – 7-Day Hazard Forecast")
-
-    csv1 = os.path.join(OUTPUT_ROOT, "branch5", "7_day_hazard_forecast.csv")
-    csv2 = os.path.join(OUTPUT_ROOT, "branch5", "forecast_with_scores.csv")
-    html = os.path.join(OUTPUT_ROOT, "branch5", "forecast_heatmap.html")
-    report = os.path.join(OUTPUT_ROOT, "branch5", "forecast_report.txt")
-
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["Forecast Heatmap", "Trend Graph", "Forecast Table", "Report"]
-    )
-
-    with tab1:
-        safe_show_html(html)
-
-    with tab2:
-        df_scores = safe_read_csv(csv2)
-        if df_scores is not None:
-            if {"day", "risk_score"}.issubset(df_scores.columns):
-                st.plotly_chart(
-                    px.line(df_scores, x="day", y="risk_score"),
-                    use_container_width=True
-                )
-
-    with tab3:
-        df_fore = safe_read_csv(csv1)
-        if df_fore is not None:
-            st.dataframe(df_fore)
-
-    with tab4:
-        if os.path.exists(report):
-            with open(report, "r") as f:
-                st.text(f.read())
-
-
-# --------------------------------------------------------------
-# BRANCH 6
-# --------------------------------------------------------------
-elif branch == "Branch 6 – GeoHealth Dashboard":
-    section("Branch 6 – GeoHealth Dashboard")
-
-    csv_path = os.path.join(OUTPUT_ROOT, "branch6", "geohealth_scores.csv")
-    df = safe_read_csv(csv_path)
-
+    st.subheader("City Risk Table")
     if df is not None:
         st.dataframe(df)
 
-        if "city" in df.columns and "health_risk_score" in df.columns:
-            st.plotly_chart(
-                px.bar(df, x="city", y="health_risk_score"),
-                use_container_width=True
-            )
+    st.subheader("Hazard Report")
+    report_path = os.path.join(OUTPUT_ROOT, "branch4/hazard_report.txt")
+    if os.path.exists(report_path):
+        st.text(open(report_path).read())
 
+# -------------------------------------------------------------------
+# BRANCH 5 – 7-DAY FORECAST
+# -------------------------------------------------------------------
+elif menu == "Branch 5 – 7-Day Forecast":
+    st.header("Branch 5 – 7-Day Hazard Forecast")
 
-# --------------------------------------------------------------
-# BRANCH 7
-# --------------------------------------------------------------
-elif branch == "Branch 7 – Early Warning Alerts":
-    section("Branch 7 – Early Warning Alerts")
+    show_html(os.path.join(OUTPUT_ROOT, "branch5/forecast_heatmap.html"))
+    df1 = read_csv(os.path.join(OUTPUT_ROOT, "branch5/7_day_hazard_forecast.csv"))
+    df2 = read_csv(os.path.join(OUTPUT_ROOT, "branch5/forecast_with_scores.csv"))
 
-    csv_path = os.path.join(OUTPUT_ROOT, "branch7", "early_alerts.csv")
-    df = safe_read_csv(csv_path)
+    if df1 is not None:
+        st.subheader("Forecast Table")
+        st.dataframe(df1)
 
+    if df2 is not None:
+        st.subheader("Risk Trend")
+        fig = px.line(df2, x="day", y="risk_score", title="7-Day Risk Trend")
+        st.plotly_chart(fig)
+
+    report_path = os.path.join(OUTPUT_ROOT, "branch5/forecast_report.txt")
+    if os.path.exists(report_path):
+        st.subheader("Forecast Report")
+        st.text(open(report_path).read())
+
+# -------------------------------------------------------------------
+# BRANCH 6 – GEOHEALTH DASHBOARD
+# -------------------------------------------------------------------
+elif menu == "Branch 6 – GeoHealth Dashboard":
+    st.header("Branch 6 – GeoHealth Dashboard")
+
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch6/geohealth_scores.csv"))
     if df is not None:
         st.dataframe(df)
-        if "alert_level" in df.columns:
-            st.plotly_chart(
-                px.histogram(df, x="alert_level"),
-                use_container_width=True
-            )
+        fig = px.bar(df, x="city", y="health_risk_score", title="Health Risk by City")
+        st.plotly_chart(fig)
 
+# -------------------------------------------------------------------
+# BRANCH 7 – EARLY WARNING ALERTS
+# -------------------------------------------------------------------
+elif menu == "Branch 7 – Early Warning Alerts":
+    st.header("Branch 7 – Early Warning Alerts (48-Hr)")
 
-# --------------------------------------------------------------
-# BRANCH 8
-# --------------------------------------------------------------
-elif branch == "Branch 8 – Smart-City Decision Engine":
-    section("Branch 8 – Smart-City Decision Engine")
-
-    csv_path = os.path.join(OUTPUT_ROOT, "branch8", "city_decisions.csv")
-    df = safe_read_csv(csv_path)
-
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch7/early_alerts.csv"))
     if df is not None:
         st.dataframe(df)
 
-        if "status" in df.columns:
-            status_count = df["status"].value_counts().reset_index()
-            status_count.columns = ["status", "count"]
+# -------------------------------------------------------------------
+# BRANCH 8 – DECISION ENGINE
+# -------------------------------------------------------------------
+elif menu == "Branch 8 – Decision Engine":
+    st.header("Branch 8 – Smart-City Decision Engine")
 
-            st.plotly_chart(
-                px.bar(status_count, x="status", y="count"),
-                use_container_width=True
-            )
+    df = read_csv(os.path.join(OUTPUT_ROOT, "branch8/city_decisions.csv"))
+    if df is not None:
+        st.dataframe(df)
 
-        if "city" in df.columns:
-            city = st.selectbox("Select City", df["city"].unique())
-            st.table(df[df["city"] == city])
+        cities = df["city"].unique()
+        selected = st.selectbox("Select City", cities)
+        st.subheader(f"Recommendations for {selected}")
+        st.table(df[df["city"] == selected])
